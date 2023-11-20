@@ -1,4 +1,6 @@
 ;; -*- lexical-binding: t -*-
+;;; Commentary:
+;;; Code:
 
 (defvar shl/init-file-loaded-p nil
   "Non-nil if the init-file has already been loaded.")
@@ -29,12 +31,18 @@
 	   (require-init 'shl-defaults)
 	   (require-init 'shl-minibuffer)
 	   (require-init 'shl-appearance)
-	   (require-init 'shl-vc))))
+	   (require-init 'shl-vc)
+	   (require-init 'shl-window)
+	   (require-init 'shl-term)
+       (require-init 'shl-search)
+       (require-init 'shl-org)
+       (require-init 'shl-org-roam)
+       (require-init 'shl-lsp)
+       (require-init 'shl-company)
+       (require-init 'shl-treesitter)
+       (require-init 'shl-zig)
+       (require-init 'shl-editing))))
 
 ;; Local Variables:
 ;; no-native-compile: t
 ;; End:
-	 
-	 
-	 
-      

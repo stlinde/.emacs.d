@@ -58,3 +58,5 @@ site-lisp/package/
 /projects
 /forge-*.sqlite
 /elpaca/
+/emacs-autosave/
+/emacs-backups/

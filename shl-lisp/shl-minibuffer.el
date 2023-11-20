@@ -3,6 +3,12 @@
 ;;; Commentary:
 ;;; Code:
 
+;; Use which-key for command maps
+(use-package which-key
+  :ensure t
+  :init
+  (which-key-mode))
+
 ;; Use vertico for minibuffer completion
 (use-package vertico
   :ensure t

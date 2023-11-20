@@ -38,10 +38,9 @@
           (bg-line-number-inactive unspecified)
           (fg-line-number-active fg-main)
           (bg-prompt bg-blue-nuanced)
-          (fg-prompt blue-warmer)
-          ;; ,@modus-themes-preset-overrides-warmer
-          ))
+          (fg-prompt blue-warmer)))
   (load-theme 'modus-vivendi-tinted t))
+
 
 ;; Disable unwanted ui
 (push '((menu-bar-lines . 0)
@@ -64,15 +63,29 @@
 (use-package spacious-padding
   :ensure t
   :init
+  (setq spacious-padding-widths
+        '( :internal-border-width 15
+           :header-line-width 4
+           :mode-line-width 2
+           :tab-width 4
+           :right-divider-width 30
+           :scroll-bar-width 8))
   (spacious-padding-mode))
 
 ;; Set font
-(push '(font . "JetBrainsMono Nerd Font-10") default-frame-alist)
+(push '(font . "JetBrains Mono-10") default-frame-alist)
 
 ;; Modeline
 (setq modeline-compact nil)
 (display-time-mode 1)
 (display-battery-mode 1)
+
+(use-package doom-modeline
+  :ensure t
+  :init (doom-modeline-mode)
+  :custom
+  (doom-modeline-hud t)
+  (doom-modeline-buffer-encoding nil))
 
 (provide 'shl-appearance)
 ;; shl-appearance.el ends here
