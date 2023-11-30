@@ -41,7 +41,9 @@
        (require-init 'shl-company)
        (require-init 'shl-treesitter)
        (require-init 'shl-zig)
-       (require-init 'shl-editing))))
+       (require-init 'shl-editing)
+       (require-init 'shl-reading)
+       (require-init 'shl-workspaces))))
 
 ;; Local Variables:
 ;; no-native-compile: t
