@@ -72,11 +72,17 @@
 Load modules.
 
 #+begin_src emacs-lisp :tangle "init.el"
-(let* ((file-name-handler-alist nil))
-  (require-init 'shl-package)
-  (require-init 'shl-startup)
-  (require-init 'shl-appearance)
-  (require-init 'shl-org))
+  (let* ((file-name-handler-alist nil))
+    (require-init 'shl-package)
+    (require-init 'shl-startup)
+    (require-init 'shl-appearance)
+    (require-init 'shl-defaults)
+    (require-init 'shl-minibuffer)
+    (require-init 'shl-editing)
+    (require-init 'shl-development)
+    (require-init 'shl-vc)
+    (require-init 'shl-python)
+    (require-init 'shl-org))
 #+end_src
 
 * =shl/package=
@@ -223,7 +229,7 @@ advice for `require-package', to which ARGS are passed."
 
 #+begin_src emacs-lisp :tangle "lisp/shl-startup.el"
 (provide 'shl-startup)
-;;; shl-misc.el ends here
+;;; shl-startup.el ends here
 #+end_src
 
 * =shl/appearance=
@@ -237,35 +243,35 @@ advice for `require-package', to which ARGS are passed."
 ** Theme
 
 #+begin_src emacs-lisp :tangle "lisp/shl-appearance.el"
-;; Install theme
-(require-package 'color-theme-sanityinc-tomorrow)
-
 ;; Don't ask if theme is safe
 (setopt custom-safe-themes t)
-(setq-default custom-enabled-themes '(sanityinc-tomorrow-bright))
 
-;; Ensure that themes will be applied even if they have not been customized
-(defun reapply-themes ()
-  "Forcibly load the themes listed in `custom-enabled-themes'."
-  (dolist (theme custom-enabled-themes)
-    (unless (custom-theme-p theme)
-      (load-theme theme)))
-  (custom-set-variables `(custom-enabled-themes (quote ,custom-enabled-themes))))
+;; Install theme
+(require-package 'ef-themes)
 
-(add-hook 'after-init-hook 'reapply-themes)
+;; Customize ef-themes
+(setq ef-themes-mixed-fonts t
+      ef-themes-variable-pitch-ui t)
 
-;; Toggle between light and dark
-(defun light ()
-  "Activate a light color theme."
-  (interactive)
-  (setq custom-enabled-themes '(sanityinc-tomorrow-day))
-  (reapply-themes))
 
-(defun dark ()
-  "Activate a dark color theme."
-  (interactive)
-  (setq custom-enabled-themes '(sanityinc-tomorrow-bright))
-  (reapply-themes))
+
+;; Modeline
+(defun shl/ef-themes-mode-line ()
+  "Tweak the style of the modeline"
+  (ef-themes-with-colors
+    (custom-set-faces
+     `(mode-line ((,c :background ,bg-active :foreground ,fg-main :box (:line-width 1 :color ,fg-dim))))
+     `(mode-linde-inactive ((,c box (:line-width 1 :color ,bg-active)))))))
+(add-hook 'ef-themes-post-load-hook #'shl/ef-themes-mode-line)
+
+
+;; Load theme (ef-themes-select also calls ef-themes-post-load-hook)
+(ef-themes-select 'ef-deuteranopia-light)
+
+;; Enabling toggling
+(setq ef-themes-to-toggle '(ef-deuteranopia-light ef-deuteranopia-dark))
+(global-set-key (kbd "C-c h t") 'ef-themes-toggle)
+
 #+end_src
 
 ** Font
@@ -291,12 +297,106 @@ advice for `require-package', to which ARGS are passed."
   (add-hook 'prog-mode-hook 'display-fill-column-indicator-mode))
 #+end_src
 
+** Modeline
+
+#+begin_src emacs-lisp :tangle "lisp/shl-appearance.el"
+(display-time-mode)
+(display-battery-mode)
+#+end_src
+
 #+begin_src emacs-lisp :tangle "lisp/shl-appearance.el"
 (provide 'shl-appearance)
 ;;; shl-appearance.el ends here
 #+end_src
 
+* =shl/defaults=
 
+#+begin_src emacs-lisp :tangle "lisp/shl-defaults.el"
+;;; shl-defaults.el --- -*- lexical-binding: t -*-
+;;; Commentary:
+;;; Code:
+#+end_src
+
+** PATH
+
+#+begin_src emacs-lisp :tangle "lisp/shl-defaults.el"
+(require-package 'exec-path-from-shell)
+
+(when (or (memq window-system '(mac ns x pgtk))
+          (unless (memq system-type '(ms-dos windows-nt))
+            (daemonp)))
+  (exec-path-from-shell-initialize))
+#+end_src
+
+** Misc
+
+#+begin_src emacs-lisp :tangle "lisp/shl-defaults.el"
+(setq-default bookmark-default-file (locate-user-emacs-file ".bookmarks.el")
+	      buffer-menu-max-size 30
+	      case-fold-search t
+	      column-number-mode t
+	      indent-tabs-mode nil
+	      create-lockfiles nil
+	      auto-save-default nil
+	      make-backup-files nil
+	      vc-make-backup-files nil
+	      save-interprogram-paste-before-kill t
+	      scroll-preserve-screen-position 'always
+              truncate-lines nil
+              truncate-partial-width-windows nil)
+
+;; Speed up font rendering for special characters
+;; @see https://www.reddit.com/r/emacs/comments/988paa/emacs_on_windows_seems_lagging/
+(setq inhibit-compacting-font-caches t)
+
+;; GUI Frames
+(setq use-file-dialog nil)
+(setq use-dialog-box nil)
+
+;; Savehist
+(savehist-mode 1)
+
+
+
+(require 'window)
+
+(defun hsplit-last-buffer ()
+  "Focus to the last created horizontal window."
+  (interactive)
+  (split-window-horizontally)
+  (other-window 1))
+
+(defun vsplit-last-buffer ()
+  "Focus to the last created vertical window."
+  (interactive)
+  (split-window-vertically)
+  (other-window 1))
+(global-set-key (kbd "C-x 2") 'vsplit-last-buffer)
+(global-set-key (kbd "C-x 3") 'hsplit-last-buffer)
+
+(global-set-key [remap kill-buffer] 'kill-this-buffer)
+#+end_src
+
+*** Hooks
+
+#+begin_src emacs-lisp :tangle "lisp/shl-defaults.el"
+(add-hook 'after-init-hook 'delete-selection-mode)
+
+;; Automatically revert buffers when file changes on disk
+(add-hook 'after-init-hook 'global-auto-revert-mode)
+(setq global-auto-revert-non-file-buffers t
+      auto-revert-verbose nil)
+(with-eval-after-load 'autorevert
+  (diminish 'auto-revert-mode))
+
+;; Highlighted region is highlighted with the 'region' face
+(add-hook 'after-init-hook 'transient-mark-mode)
+#+end_src
+
+#+begin_src emacs-lisp :tangle "lisp/shl-defaults.el"
+(provide 'shl-defaults)
+;;; shl-defaults.el ends here
+#+end_src
 
 * =shl/editing=
 
@@ -313,6 +413,48 @@ advice for `require-package', to which ARGS are passed."
   (add-hook 'after-init-hook 'electric-pair-mode))
 (add-hook 'after-init-hook 'electric-indent-mode)
 
+;; Newlines
+(defun sanityinc/newline-at-end-of-line ()
+  "Move to end of line, enter a newline, and reindent."
+  (interactive)
+  (move-end-of-line 1)
+  (newline-and-indent))
+
+(global-set-key (kbd "S-<return>") 'sanityinc/newline-at-end-of-line)
+
+;; Subword-mode enables moving in CamelCase and snake_case
+(add-hook 'after-init-hook 'subword-mode)
+(with-eval-after-load 'subword
+  (diminish 'subword-mode))
+#+end_src
+
+Using avy makes jumping around far more effective
+
+#+begin_src emacs-lisp :tangle "lisp/shl-editing.el"
+(when (maybe-require-package 'avy)
+  (global-set-key (kbd "M-j") 'avy-goto-char-timer))
+#+end_src
+
+** Kill Ring
+
+#+begin_src emacs-lisp :tangle "lisp/shl-editing.el"
+(require-package 'browse-kill-ring)
+
+(setq browse-kill-ring-separator "\f")
+(global-set-key (kbd "M-Y") 'browse-kill-ring)
+
+(with-eval-after-load 'browse-kill-ring
+  (define-key browse-kill-ring-mode-map (kbd "C-g") 'browse-kill-ring-quit)
+  (define-key browse-kill-ring-mode-map (kbd "M-n") 'browse-kill-ring-forward)
+  (define-key browse-kill-ring-mode-map (kbd "M-p") 'browse-kill-ring-previous))
+  
+(with-eval-after-load 'page-break-lines
+  (add-to-list 'page-break-lines-modes 'browse-kill-ring-mode))
+#+end_src
+
+
+
+#+begin_src emacs-lisp :tangle "lisp/shl-editing.el"
 (provide 'shl-editing)
 ;;; shl-editing.el ends here
 #+end_src
@@ -403,4 +545,179 @@ advice for `require-package', to which ARGS are passed."
   (when (maybe-require-package 'marginalia)
     (add-hook 'after-init-hook 'marginalia-mode)))
 
+#+end_src
+
+** Which-key
+
+#+begin_src emacs-lisp :tangle "lisp/shl-minibuffer.el"
+(when (maybe-require-package 'which-key)
+  (add-hook 'after-init-hook 'which-key-mode)
+  (setq-default which-key-idle-delay 0.3)
+
+  (with-eval-after-load 'which-key
+    (diminish 'which-key-mode)))
+#+end_src
+
+#+begin_src emacs-lisp :tangle "lisp/shl-minibuffer.el"
+(provide 'shl-minibuffer)
+;;; shl-minibuffer.el ends here
+#+end_src
+
+* Version Control
+
+#+begin_src emacs-lisp :tangle "lisp/shl-vc.el"
+;;; shl-vc.el --- -*- lexical-binding: t -*-
+;;; Commentary:
+;;; Code:
+#+end_src
+
+#+begin_src emacs-lisp :tangle "lisp/shl-vc.el"
+(when (maybe-require-package 'magit)
+  (global-set-key (kbd "C-x g") 'magit-status)
+  (global-set-key (kbd "C-x M-g") 'magit-dispatch))
+#+end_src
+
+#+begin_src emacs-lisp :tangle "lisp/shl-vc.el"
+(provide 'shl-vc)
+;;; shl-vc.el ends here
+#+end_src
+
+* Development
+
+#+begin_src emacs-lisp :tangle "lisp/shl-development.el"
+;;; shl-development.el --- -*- lexical-binding: t -*-
+;;; Commentary:
+;;; Code:
+#+end_src
+
+** TreeSitter
+
+#+begin_src emacs-lisp :tangle "lisp/shl-development.el"
+  (when (maybe-require-package 'treesit-auto)
+    (require 'treesit-auto)
+    (setopt treesit-auto-install 'prompt)
+    (global-treesit-auto-mode))
+#+end_src
+
+** LSP
+
+#+begin_src emacs-lisp :tangle "lisp/shl-development.el"
+  (when (maybe-require-package 'eglot)
+    (maybe-require-package 'consult-eglot))
+#+end_src
+
+** AutoComplete
+
+*** Corfu
+
+#+begin_src emacs-lisp :tangle "lisp/shl-development.el"
+(setq tab-always-indent 'complete)
+
+(when (maybe-require-package 'orderless)
+  (with-eval-after-load 'vertico
+    (require 'orderless)
+    (setq completion-styles '(orderless basic))))
+
+(setq completion-category-defaults nil
+      completion-category-overrides nil)
+(setq completion-cycle-threshold 4)
+
+(when (maybe-require-package 'corfu)
+
+  ;; Customize Corfu
+  (setq global-corfu-modes '((not erc-mode
+				  circe-mode
+				  help-mode
+				  gud-mode
+				  eat-mode)
+			     t)
+	corfu-auto t
+	corfu-auto-delay 0.1
+	corfu-auto-prefix 1
+	corfu-cycle t
+	corfu-separator ?\s
+	corfu-preselect 'prompt
+	corfu-count 16
+	corfu-max-width 120
+	corfu-preview-current nil
+	corfu-on-exact-match nil
+	corfu-quit-at-boundary 'separator
+	corfu-quit-no-match 'separator)
+  (setq-default corfu-quit-no-match 'separator)
+  (add-hook 'after-init-hook 'global-corfu-mode)
+  
+  ;; Corfu when running Emacs in terminal
+  ;; (when (maybe-require-package 'corfu-terminal)
+  ;;   (with-eval-after-load 'corfu
+  ;;     (corfu-terminal-mode)))
+
+  (require-package 'cape)
+  (add-hook 'prog-mode-hook (defun shl/corfu-add-cape-file-h ()
+			      (add-hook 'completion-at-point-function #'cape-file -10 t)))
+  (add-hook 'org-mode-hook (defun shl/corfu-add-cape-elisp-block-h ()
+			     (add-hook 'completion-at-point-functions #'cape-elisp-block 0 t)))
+
+  ;; Corfu history
+  (with-eval-after-load 'corfu
+    (require 'corfu-history)
+    (add-hook 'corfu-mode-hook 'corfu-history-mode)
+
+    (with-eval-after-load 'savehist
+      (add-to-list 'savehist-additional-variables 'corfu-history)))
+
+  ;; Popopinfo
+  (with-eval-after-load 'corfu
+    (require 'corfu-popupinfo)
+    (add-hook 'corfu-mode-hook 'corfu-popupinfo-mode)
+    (setq corfu-popupinfo-delay '(0.5 . 1.0))))
+#+end_src
+
+*** Kind-icon
+
+#+begin_src emacs-lisp :tangle "lisp/shl-development.el"
+(when (maybe-require-package 'kind-icon)
+  (with-eval-after-load 'corfu
+    (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter)))
+#+end_src
+
+#+begin_src emacs-lisp :tangle "lisp/shl-development.el"
+(provide 'shl-development)
+;;; shl-development.el ends here
+#+end_src
+
+* Languages
+
+** Python
+
+#+begin_src emacs-lisp :tangle "lisp/shl-python.el"
+;;; shl-python.el --- -*- lexical-binding: t -*-
+;;; Commentary:
+;;; Code:
+#+end_src
+
+#+begin_src emacs-lisp :tangle "lisp/shl-python.el"
+(require-package 'python)
+(setq python-indent-guess-indent-offset-verbose nil)
+(setq python-check-command "NO_COLOR=1 rye check")
+(setq python-indent-guess-indent-offset-verbose nil)
+(setq python-fill-docstring-style 'django)
+(add-hook 'python-mode-hook #'flymake-mode)
+(add-hook 'python-ts-mode-hook #'flymake-mode)
+(setq python-shell-interpreter "ipython"
+      python-shell-interpreter-args "-i --simple-prompt --InteractiveShell.display_page=True")
+
+(add-hook 'python-ts-hook 'eglot-ensure)
+
+(when (maybe-require-package 'envrc)
+  (with-eval-after-load 'envrc
+    (define-key envrc-mode-map (kbd "C-c e") 'envrc-command-map))
+  (add-hook 'after-init-mode 'envrc-global-mode))
+
+(when (maybe-require-package 'pet)
+  (add-hook 'python-base-mode-hook 'pet-mode -10))
+#+end_src
+
+#+begin_src emacs-lisp :tangle "lisp/shl-python.el"
+(provide 'shl-python)
+;;; shl-python.el ends here
 #+end_src
