@@ -1,0 +1,406 @@
+#+title: GNU Emacs Configuration
+#+author: Sebastian Hempel Linde
+#+email: sebastian@hempellinde.com
+
+* =early-init.el=
+
+#+begin_src emacs-lisp :tangle "early-init.el"
+;;; early-init.el --- -*- lexical-binding: t -*-
+;;; Commentary
+;;; Code:
+#+end_src
+
+#+begin_src emacs-lisp :tangle "early-init.el"
+;; Disable package.el
+(setq package-enable-at-startup nil)
+#+end_src
+
+** Garbage Collection
+
+#+begin_src emacs-lisp :tangle "early-init.el"
+(setq gc-cons-percentage 0.6)
+(setq gc-cons-threshold most-positive-fixnum)
+#+end_src
+
+** Initial Appearance
+
+#+begin_src emacs-lisp :tangle "early-init.el"
+(setq inhibit-startup-message t)
+
+(setq default-frame-alist
+      '((menu-bar-lines . 0)
+	(tool-bar-lines . 0)
+	(horizontal-scroll-bars)
+	(vertical-scroll-bars)))
+#+end_src
+
+#+begin_src emacs-lisp :tangle "early-init.el"
+(provide 'early-init)
+;;; early-init.el ends here
+#+end_src
+
+* =init.el=
+
+#+begin_src emacs-lisp :tangle "init.el"
+;;; init.el --- -*- lexical-binding: t -*-
+;;; Commentary:
+;;; Code:
+#+end_src
+
+** Variables
+
+#+begin_src emacs-lisp :tangle "init.el"
+(defconst my-emacs-d (file-name-as-directory user-emacs-directory)
+  "Directory of emacs.d.")
+
+(defconst my-site-lisp-dir (concat my-emacs-d "site-lisp")
+  "Directory of site-lisp.")
+
+(defconst my-lisp-dir (concat my-emacs-d "lisp")
+  "Directory of personal configuration.")
+#+end_src
+
+** Module Loading
+
+#+begin_src emacs-lisp :tangle "init.el"
+(defun require-init (pkg &optional maybe-disabled)
+  "Load PKG if MAYBE-DISABLED is nil or it's nil but start up in normal slowly."
+  (when (or (not maybe-disabled) (not my-lightweight-mode-p))
+    (load (file-truename (format "%s/%s" my-lisp-dir pkg)) t t)))
+#+end_src
+
+Load modules.
+
+#+begin_src emacs-lisp :tangle "init.el"
+(let* ((file-name-handler-alist nil))
+  (require-init 'shl-package)
+  (require-init 'shl-startup)
+  (require-init 'shl-appearance)
+  (require-init 'shl-org))
+#+end_src
+
+* =shl/package=
+
+#+begin_src emacs-lisp :tangle "lisp/shl-package.el"
+;;; shl-package.el --- -*- lexical-binding: t -*-
+;;; Commentary:
+;;; Code:
+
+(require 'package)
+(require 'cl-lib)
+
+;; Add MELPA to package-archives
+(add-to-list 'package-archives '( "melpa" . "https://melpa.org/packages/") t)
+#+end_src
+
+** Package Installation Functions
+
+The following functions eases the installation of packages in two ways:
++ ~require-package~ makes it easier to install a package with ~min-version~ and to specify whether or not to refresh the package archives.
++ ~maybe-require-package~ is for packages that you want to install but are not necessary.
+
+#+begin_src emacs-lisp :tangle "lisp/shl-package.el"
+(defun require-package (package &optional min-version no-refresh)
+  "Install given PACKAGE, optionally requiring MIN-VERSION.
+If NO-REFRESH is non-nil, the available package lists will not be
+re-downloaded in order to locate PACKAGE."
+  (when (stringp min-version)
+    (setq min-version (version-to-list min-version)))
+  (or (package-installed-p package min-version)
+      (let* ((known (cdr (assoc package package-archive-contents)))
+             (best (car (sort known (lambda (a b)
+                                      (version-list-<= (package-desc-version b)
+                                                       (package-desc-version a)))))))
+        (if (and best (version-list-<= min-version (package-desc-version best)))
+            (package-install best)
+          (if no-refresh
+              (error "No version of %s >= %S is available" package min-version)
+            (package-refresh-contents)
+            (require-package package min-version t)))
+        (package-installed-p package min-version))))
+
+(defun maybe-require-package (package &optional min-version no-refresh)
+  "Try to install PACKAGE, and return non-nil if successful.
+In the event of failure, return nil and print a warning message.
+Optionally require MIN-VERSION.  If NO-REFRESH is non-nil, the
+available package lists will not be re-downloaded in order to
+locate PACKAGE."
+  (condition-case err
+      (require-package package min-version no-refresh)
+    (error
+     (message "Couldn't install optional package `%s': %S" package err)
+     nil)))
+#+end_src
+
+** =package.el= Initialization
+
+#+begin_src emacs-lisp :tangle "lisp/shl-package.el"
+(setq package-enable-at-startup nil)
+(setq package-native-compile t)
+(package-initialize)
+
+;; package.el updates the saved version of package-selected-packages correctly only
+;; after custom-file has been loaded, which is a bug. We work around this by adding
+;; the required packages to package-selected-packages after startup is complete.
+
+(defvar shl/required-packages nil)
+
+(defun shl/note-selected-package (oldfun package &rest args)
+  "If OLDFUN reports PACKAGE was successfully installed, note that fact.
+The package name is noted by adding it to
+`shl/required-packages'.  This function is used as an
+advice for `require-package', to which ARGS are passed."
+  (let ((available (apply oldfun package args)))
+    (prog1
+        available
+      (when available
+        (add-to-list 'shl/required-packages package)))))
+
+(advice-add 'require-package :around 'shl/note-selected-package)
+
+
+(when (fboundp 'package--save-selected-packages)
+  (require-package 'seq)
+  (add-hook 'after-init-hook
+            (lambda ()
+              (package--save-selected-packages
+               (seq-uniq (append shl/required-packages package-selected-packages))))))
+
+
+(let ((package-check-signature nil))
+  (require-package 'gnu-elpa-keyring-update))
+#+end_src
+
+** Package Menu Customization
+
+#+begin_src emacs-lisp :tangle "lisp/shl-package.el"
+(defun shl/set-tabulated-list-column-width (col-name width)
+  "Set any column with name COL-NAME to the given WIDTH."
+  (when (> width (length col-name))
+    (cl-loop for column across tabulated-list-format
+             when (string= col-name (car column))
+             do (setf (elt column 1) width))))
+
+(defun shl/maybe-widen-package-menu-columns ()
+  "Widen some columns of the package menu table to avoid truncation."
+  (when (boundp 'tabulated-list-format)
+    (shl/set-tabulated-list-column-width "Version" 13)
+    (let ((longest-archive-name (apply 'max (mapcar 'length (mapcar 'car package-archives)))))
+      (shl/set-tabulated-list-column-width "Archive" longest-archive-name))))
+
+(add-hook 'package-menu-mode-hook 'shl/maybe-widen-package-menu-columns)
+#+end_src
+
+#+begin_src emacs-lisp :tangle "lisp/shl-package.el"
+(provide 'shl-package)
+;;; shl-package.el ends here
+#+end_src
+
+* =shl/startup=
+
+#+begin_src emacs-lisp :tangle "lisp/shl-startup.el"
+;;; shl-startup.el --- -*- lexical-binding: t -*-
+;;; Commentary:
+;;; Code:
+
+(require-package 'diminish)
+
+(when (fboundp 'pixel-scroll-precision-mode)
+  (pixel-scroll-precision-mode))
+#+end_src
+
+** Performance
+
+#+begin_src emacs-lisp :tangle "lisp/shl-startup.el"
+(when (require-package 'gcmh)
+  (setq gcmh-high-cons-threshold (* 128 1024 1024))
+  (add-hook 'after-init-hook (lambda ()
+                               (gcmh-mode)
+                               (diminish 'gcmh-mode))))
+
+(setq jit-lock-defer-time 0)
+#+end_src
+
+#+begin_src emacs-lisp :tangle "lisp/shl-startup.el"
+(provide 'shl-startup)
+;;; shl-misc.el ends here
+#+end_src
+
+* =shl/appearance=
+
+#+begin_src emacs-lisp :tangle "lisp/shl-appearance.el"
+;;; shl-appearance.el --- -*- lexical-binding: t -*-
+;;; Code:
+;;; Commentary:
+#+end_src
+
+** Theme
+
+#+begin_src emacs-lisp :tangle "lisp/shl-appearance.el"
+;; Install theme
+(require-package 'color-theme-sanityinc-tomorrow)
+
+;; Don't ask if theme is safe
+(setopt custom-safe-themes t)
+(setq-default custom-enabled-themes '(sanityinc-tomorrow-bright))
+
+;; Ensure that themes will be applied even if they have not been customized
+(defun reapply-themes ()
+  "Forcibly load the themes listed in `custom-enabled-themes'."
+  (dolist (theme custom-enabled-themes)
+    (unless (custom-theme-p theme)
+      (load-theme theme)))
+  (custom-set-variables `(custom-enabled-themes (quote ,custom-enabled-themes))))
+
+(add-hook 'after-init-hook 'reapply-themes)
+
+;; Toggle between light and dark
+(defun light ()
+  "Activate a light color theme."
+  (interactive)
+  (setq custom-enabled-themes '(sanityinc-tomorrow-day))
+  (reapply-themes))
+
+(defun dark ()
+  "Activate a dark color theme."
+  (interactive)
+  (setq custom-enabled-themes '(sanityinc-tomorrow-bright))
+  (reapply-themes))
+#+end_src
+
+** Font
+
+#+begin_src emacs-lisp :tangle "lisp/shl-appearance.el"
+(push '(font . "Iosevka Comfy") default-frame-alist)
+(set-face-font 'default "Iosevka Comfy")
+(set-face-font 'variable-pitch "Iosevka Comfy")
+(copy-face 'default 'fixed-pitch)
+#+end_src
+
+** Misc
+
+#+begin_src emacs-lisp :tangle "lisp/shl-appearance.el"
+(when (fboundp 'display-line-numbers-mode)
+  (setq-default display-line-numbers-width 3)
+  (add-hook 'prog-mode-hook 'display-line-numbers-mode)
+  (add-hook 'org-mode-hook 'display-line-numbers-mode))
+
+(when (boundp 'display-fill-column-indicator)
+  (setq-default indicate-buffer-boundaries 'left)
+  (setq-default display-fill-column-indicator-character ?┊)
+  (add-hook 'prog-mode-hook 'display-fill-column-indicator-mode))
+#+end_src
+
+#+begin_src emacs-lisp :tangle "lisp/shl-appearance.el"
+(provide 'shl-appearance)
+;;; shl-appearance.el ends here
+#+end_src
+
+
+
+* =shl/editing=
+
+#+begin_src emacs-lisp :tangle "lisp/shl-editing.el"
+;;; shl-editing.el --- -*- lexical-binding: t -*-
+;;; Commentary:
+;;; Code:
+#+end_src
+
+** Defaults
+
+#+begin_src emacs-lisp :tangle "lisp/shl-editing.el"
+(when (fboundp 'electric-pair-mode)
+  (add-hook 'after-init-hook 'electric-pair-mode))
+(add-hook 'after-init-hook 'electric-indent-mode)
+
+(provide 'shl-editing)
+;;; shl-editing.el ends here
+#+end_src
+
+* =shl/org=
+
+#+begin_src emacs-lisp :tangle "lisp/shl-org.el"
+;;; shl-org.el --- -*- lexical-binding: t -*-
+;;; Commentary:
+;;; Code:
+
+(require-package 'org)
+#+end_src
+
+** Appearance
+
+#+begin_src emacs-lisp :tangle "lisp/shl-org.el"
+;; Install org-modern
+(maybe-require-package 'org-modern)
+
+;; Settings
+(setopt org-auto-align-tags nil
+	org-tags-column 0
+	org-catch-invisible-edits 'show-and-error
+	org-special-ctrl-a/e t
+	org-insert-heading-respect-content t
+	org-hide-emphasis-markers t
+	org-pretty-entities t
+	org-ellipsis "…")
+
+;; Enable org-modern
+(global-org-modern-mode)
+#+end_src
+
+** Org Babel
+
+#+begin_src emacs-lisp :tangle "lisp/shl-org.el"
+(setopt org-confirm-babel-evaluate nil)
+(setopt org-src-window-setup 'current-window)
+(setopt org-edit-src-persistent-message nil)
+(setopt org-src-fontify-natively t)
+(setopt org-src-preserve-indentation t)
+(setopt org-src-tab-acts-natively t)
+(setopt org-edit-src-content-indentation 0)
+#+end_src
+
+#+begin_src emacs-lisp :tangle "lisp/shl-org.el"
+(provide 'shl-org)
+;;; shl-org.el ends here
+#+end_src
+
+* =shl-minibuffer=
+
+#+begin_src emacs-lisp :tangle "lisp/shl-minibuffer.el"
+;;; shl-minibuffer.el --- -*- lexical-binding: t -*-
+;;; Commentary:
+;;; Code:
+#+end_src
+
+** Completion
+
+#+begin_src emacs-lisp :tangle "lisp/shl-minibuffer.el"
+;; Vertico and friends
+(when (maybe-require-package 'vertico)
+  (add-hook 'after-init-hook 'vertico-mode)
+
+
+  ;; Embark
+  (when (maybe-require-package 'embark)
+    (with-eval-after-load 'vertico
+      (define-key vertico-map (kbd "C-c C-o") 'embark-export)
+      (define-key vertico-map (kbd "M-.") 'embark-act)))
+
+  ;; Consult
+  (when (maybe-require-package 'consult)
+    (global-set-key [remap switch-to-buffer] 'consult-buffer)
+    (global-set-key [remap switch-to-buffer-other-window] 'consult-buffer-other-window)
+    (global-set-key [remap switch-to-buffer-other-frame] 'consult-buffer-other-frame)
+    (global-set-key [remap goto-line] 'consult-goto-line)
+
+    ;; Embark-Consult
+    (when (maybe-require-package 'embark-consult)
+      (with-eval-after-load 'embark
+	(require 'embark-consult)
+	(add-hook 'embark-collect-mode-hook 'embark-consult-preview-minor-mode))))
+
+  ;; Marginalia
+  (when (maybe-require-package 'marginalia)
+    (add-hook 'after-init-hook 'marginalia-mode)))
+
+#+end_src
