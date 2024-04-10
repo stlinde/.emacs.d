@@ -462,11 +462,56 @@ Using avy makes jumping around far more effective
 * =shl/org=
 
 #+begin_src emacs-lisp :tangle "lisp/shl-org.el"
-;;; shl-org.el --- -*- lexical-binding: t -*-
-;;; Commentary:
-;;; Code:
-
+  ;;; shl-org.el --- -*- lexical-binding: t -*-
+  ;;; Commentary:
+  ;;; Code:
 (require-package 'org)
+
+(maybe-require-package 'org-cliplink)
+#+end_src
+
+** Bindings
+
+#+begin_src emacs-lisp :tangle "lisp/shl-org.el"
+(define-key global-map (kbd "C-c l") 'org-store-link)
+(define-key global-map (kbd "C-c c") 'org-capture)
+(define-key global-map (kbd "C-c a") 'org-agenda)
+
+(with-eval-after-load 'org
+  (define-key org-mode-map [remap goto-line] 'consult-org-heading))
+
+;; Org Prefix Map
+(defvar shl/org-global-prefix-map (make-sparse-keymap)
+  "A keymap for global access to org helpers.")
+
+(define-key shl/org-global-prefix-map (kbd "j") 'org-clock-goto)
+(define-key shl/org-global-prefix-map (kbd "l") 'org-clock-in-last)
+(define-key shl/org-global-prefix-map (kbd "i") 'org-clock-in)
+(define-key shl/org-global-prefix-map (kbd "o") 'org-clock-out)
+(define-key global-map (kbd "C-c o") shl/org-global-prefix-map)
+#+end_src
+
+** Settings
+
+#+begin_src emacs-lisp :tangle "lisp/shl-org.el"
+(setq org-log-done t
+      org-edit-timestamp-down-means-later t
+      org-hide-emphasis-markers t
+      org-catch-invisible-edits 'show
+      org-export-coding-system 'utf-8
+      org-fast-tag-selection-single-key 'expert
+      org-html-validation-link nil
+      org-export-kill-product-buffer-when-displayed t
+      org-tags-column 80)
+#+end_src
+
+** Agenda
+
+#+begin_src emacs-lisp :tangle "lisp/shl-org.el"
+;; Re-align tags when window shape changes
+(with-eval-after-load 'org-agenda
+  (add-hook 'org-agenda-mode-hook
+            (lambda () (add-hook 'window-configuration-change-hook 'org-agenda-align-tags nil t))))
 #+end_src
 
 ** Appearance
@@ -571,10 +616,26 @@ Using avy makes jumping around far more effective
 ;;; Code:
 #+end_src
 
+** Magit 
+
 #+begin_src emacs-lisp :tangle "lisp/shl-vc.el"
 (when (maybe-require-package 'magit)
   (global-set-key (kbd "C-x g") 'magit-status)
   (global-set-key (kbd "C-x M-g") 'magit-dispatch))
+
+;; Show source file TODO in magit
+(maybe-require-package 'magit-todo)
+
+;; Good commit style
+(maybe-require-package 'git-commit)
+#+end_src
+
+** Git Configuration Files
+
+#+begin_src emacs-lisp :tangle "lisp/shl-vc.el"
+(require-package 'git-modes)
+(when (maybe-require-package 'git-timemachine)
+  (global-set-key (kbd "C-x v t") 'git-timemachine-toggle))
 #+end_src
 
 #+begin_src emacs-lisp :tangle "lisp/shl-vc.el"
@@ -626,26 +687,32 @@ Using avy makes jumping around far more effective
 
   ;; Customize Corfu
   (setq global-corfu-modes '((not erc-mode
-				  circe-mode
-				  help-mode
-				  gud-mode
-				  eat-mode)
-			     t)
-	corfu-auto t
-	corfu-auto-delay 0.1
-	corfu-auto-prefix 1
-	corfu-cycle t
-	corfu-separator ?\s
-	corfu-preselect 'prompt
-	corfu-count 16
-	corfu-max-width 120
-	corfu-preview-current nil
-	corfu-on-exact-match nil
-	corfu-quit-at-boundary 'separator
-	corfu-quit-no-match 'separator)
+                                  circe-mode
+                                  help-mode
+                                  gud-mode
+                                  eat-mode)
+                             t)
+        corfu-auto t
+        corfu-auto-delay 0.1
+        corfu-auto-prefix 1
+        corfu-cycle t
+        corfu-separator ?\s
+        corfu-preselect 'first
+        corfu-count 16
+        corfu-max-width 120
+        corfu-preview-current nil
+        corfu-on-exact-match nil
+        corfu-quit-at-boundary 'separator
+        corfu-quit-no-match 'separator)
   (setq-default corfu-quit-no-match 'separator)
   (add-hook 'after-init-hook 'global-corfu-mode)
-  
+
+  ;; Rebinding keys
+  (with-eval-after-load 'corfu
+    (define-key corfu-map (kbd "C-y") 'corfu-insert)
+    (define-key corfu-map (kbd "RET") nil))
+
+
   ;; Corfu when running Emacs in terminal
   ;; (when (maybe-require-package 'corfu-terminal)
   ;;   (with-eval-after-load 'corfu
@@ -653,9 +720,9 @@ Using avy makes jumping around far more effective
 
   (require-package 'cape)
   (add-hook 'prog-mode-hook (defun shl/corfu-add-cape-file-h ()
-			      (add-hook 'completion-at-point-function #'cape-file -10 t)))
+                              (add-hook 'completion-at-point-function #'cape-file -10 t)))
   (add-hook 'org-mode-hook (defun shl/corfu-add-cape-elisp-block-h ()
-			     (add-hook 'completion-at-point-functions #'cape-elisp-block 0 t)))
+                             (add-hook 'completion-at-point-functions #'cape-elisp-block 0 t)))
 
   ;; Corfu history
   (with-eval-after-load 'corfu
