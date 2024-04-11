@@ -278,10 +278,20 @@ advice for `require-package', to which ARGS are passed."
 ** Font
 
 #+begin_src emacs-lisp :tangle "lisp/shl-appearance.el"
-(push '(font . "Iosevka Comfy") default-frame-alist)
-(set-face-font 'default "Iosevka Comfy")
-(set-face-font 'variable-pitch "Iosevka Comfy")
-(copy-face 'default 'fixed-pitch)
+(set-face-attribute 'default nil
+                    :family "Iosevka Comfy"
+                    :height 105
+                    :weight 'semilight)
+
+(set-face-attribute 'variable-pitch nil
+                    :family "Iosevka Comfy Motion Duo"
+                    :height 105
+                    :weight 'semilight)
+
+(set-face-attribute 'fixed-pitch nil
+                    :family "Iosevka Comfy"
+                    :height 105
+                    :weight 'semilight)
 #+end_src
 
 ** Misc
@@ -298,11 +308,14 @@ advice for `require-package', to which ARGS are passed."
   (add-hook 'prog-mode-hook 'display-fill-column-indicator-mode))
 #+end_src
 
-** Modeline
+** Mode-line
 
 #+begin_src emacs-lisp :tangle "lisp/shl-appearance.el"
 (display-time-mode)
 (display-battery-mode)
+
+(require-package 'mood-line)
+(mood-line-mode)
 #+end_src
 
 #+begin_src emacs-lisp :tangle "lisp/shl-appearance.el"
@@ -333,6 +346,7 @@ advice for `require-package', to which ARGS are passed."
 
 #+begin_src emacs-lisp :tangle "lisp/shl-defaults.el"
 (setq-default bookmark-default-file (locate-user-emacs-file ".bookmarks.el")
+              use-short-answers t
 	      buffer-menu-max-size 30
 	      case-fold-search t
 	      column-number-mode t
@@ -572,6 +586,9 @@ Using avy makes jumping around far more effective
 ** Agenda
 
 #+begin_src emacs-lisp :tangle "lisp/shl-org.el"
+;; Set Agenda Files
+(setq org-agenda-files `(,org-directory))
+
 ;; Re-align tags when window shape changes
 (with-eval-after-load 'org-agenda
   (add-hook 'org-agenda-mode-hook
@@ -863,13 +880,42 @@ Using avy makes jumping around far more effective
 ;;; Code:
 #+end_src
 
-** TreeSitter
+** Tree Sitter
 
 #+begin_src emacs-lisp :tangle "lisp/shl-development.el"
 (when (maybe-require-package 'treesit-auto)
   (require 'treesit-auto)
   (setopt treesit-auto-install 'prompt)
   (global-treesit-auto-mode))
+#+end_src
+
+** Terminal
+
+#+begin_src emacs-lisp "lisp/shl-development.el"
+(when (maybe-require-package 'eat)
+  (add-hook 'eat-mode-hook (lambda () (setq indicate-buffer-boundaries nil)))
+
+  (defun shl/on-eat-exit (process)
+    (when (zerop (process-exit-status process))
+      (kill-buffer)
+      (unless (eq (selected-window) (next-window))
+        (delete-window))))
+  (add-hook 'eat-exit-hook 'shl/on-eat-exit)
+
+
+  (with-eval-after-load 'eat
+    (custom-set-variables
+     `(eat-semi-char-non-bound-keys
+       (quote ,(cons [?\e ?w] eat-semi-char-non-bound-keys)))))
+
+  (defcustom shl/eat-map
+    (let ((map (make-sparse-keymap)))
+      (define-key map (kbd "t") 'eat-other-window)
+      map)
+    "Prefix map for commands that create and manipulate eat buffers.")
+  (fset 'shl/eat-map shl/eat-map)
+
+  (global-set-key (kbd "C-c t") 'shl/eat-map))
 #+end_src
 
 ** LSP
@@ -879,7 +925,7 @@ Using avy makes jumping around far more effective
     (maybe-require-package 'consult-eglot))
 #+end_src
 
-** AutoComplete
+** Auto Complete
 
 *** Corfu
 
@@ -891,8 +937,9 @@ Using avy makes jumping around far more effective
     (require 'orderless)
     (setq completion-styles '(orderless basic))))
 
-(setq completion-category-defaults nil
-      completion-category-overrides nil)
+(setq completion-category-defaults nil)
+(setq completion-category-overrides '((eglot (styles orderless))
+                                      (eglot-capf (styles orderless))))
 (setq completion-cycle-threshold 4)
 
 (when (maybe-require-package 'corfu)
@@ -917,6 +964,8 @@ Using avy makes jumping around far more effective
         corfu-quit-at-boundary 'separator
         corfu-quit-no-match 'separator)
   (setq-default corfu-quit-no-match 'separator)
+  (setq text-mode-ispell-word-completion nil)
+
   (add-hook 'after-init-hook 'global-corfu-mode)
 
   ;; Rebinding keys
@@ -992,8 +1041,8 @@ Using avy makes jumping around far more effective
     (define-key envrc-mode-map (kbd "C-c e") 'envrc-command-map))
   (add-hook 'after-init-mode 'envrc-global-mode))
 
-(when (maybe-require-package 'pet)
-  (add-hook 'python-base-mode-hook 'pet-mode -10))
+;; (when (maybe-require-package 'pet)
+;;   (add-hook 'python-base-mode-hook 'pet-mode -10))
 #+end_src
 
 #+begin_src emacs-lisp :tangle "lisp/shl-python.el"
@@ -1003,8 +1052,42 @@ Using avy makes jumping around far more effective
 
 * Misc
 
-** PDF
+#+begin_src emacs-lisp :tangle "lisp/shl-misc.el"
+;;; shl-misc.el --- -*- lexical-binding: t -*-
+;;; Commentary:
+;;; Code:
+#+end_src
+
+** TODO PDF
 
 #+begin_src emacs-lisp :tangle "lisp/shl-misc.el"
 (maybe-require-package 'pdf-tools)
+#+end_src
+
+** Spelling
+
+#+begin_src emacs-lisp :tangle "lisp/shl-misc.el"
+(setq ispell-local-dictionary "en_US")
+(setq ispell-program-name "hunspell")
+(setq ispell-local-dictionary-alist
+      '(("en_US" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_US") nil utf-8)))
+(when (boundp 'ispell-hunspell-dictionary-alist)
+      (setq ispell-hunspell-dictionary-alist ispell-local-dictionary-alist))
+
+(when (maybe-require-package 'jinx)
+  (add-hook 'org-mode-hook 'jinx-mode)
+  (setq jinx-languages "en_US"))
+#+end_src
+
+** Browser
+
+#+begin_src emacs-lisp :tangle "lisp/shl-misc.el"
+(setq browse-url-function 'eww-browse
+      shr-use-colors nil
+      shr-folding-mode t)
+#+end_src
+
+#+begin_src emacs-lisp :tangle "lisp/shl-misc.el"
+(provide 'shl-misc)
+;;; shl-misc.el ends here
 #+end_src
