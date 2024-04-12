@@ -311,6 +311,7 @@ advice for `require-package', to which ARGS are passed."
 ** Mode-line
 
 #+begin_src emacs-lisp :tangle "lisp/shl-appearance.el"
+(setq display-time-format " %a %e %b, %H:%M ")
 (display-time-mode)
 (display-battery-mode)
 
@@ -926,8 +927,10 @@ Using avy makes jumping around far more effective
 ** LSP
 
 #+begin_src emacs-lisp :tangle "lisp/shl-development.el"
-  (when (maybe-require-package 'eglot)
-    (maybe-require-package 'consult-eglot))
+(when (maybe-require-package 'eglot)
+  (maybe-require-package 'consult-eglot)
+
+  (add-hook 'python-ts-mode-hook 'eglot-ensure))
 #+end_src
 
 ** Auto Complete
@@ -935,88 +938,100 @@ Using avy makes jumping around far more effective
 *** Corfu
 
 #+begin_src emacs-lisp :tangle "lisp/shl-development.el"
-(setq tab-always-indent 'complete)
+  (setq tab-always-indent 'complete)
 
-(when (maybe-require-package 'orderless)
-  (with-eval-after-load 'vertico
-    (require 'orderless)
-    (setq completion-styles '(orderless basic))))
+  (when (maybe-require-package 'orderless)
+    (with-eval-after-load 'vertico
+      (require 'orderless)
+      (setq completion-styles '(orderless basic))))
 
-(setq completion-category-defaults nil)
-(setq completion-category-overrides '((eglot (styles orderless))
-                                      (eglot-capf (styles orderless))))
-(setq completion-cycle-threshold 4)
+  (setq completion-category-defaults nil)
+  (setq completion-category-overrides '((eglot (styles orderless))
+                                        (eglot-capf (styles orderless))))
+  (setq completion-cycle-threshold 4)
 
-(when (maybe-require-package 'corfu)
+  (when (maybe-require-package 'corfu)
 
-  ;; Customize Corfu
-  (setq global-corfu-modes '((not erc-mode
-                                  circe-mode
-                                  help-mode
-                                  gud-mode
-                                  eat-mode)
-                             t)
-        corfu-auto t
-        corfu-auto-delay 0.1
-        corfu-auto-prefix 1
-        corfu-cycle t
-        corfu-separator ?\s
-        corfu-preselect 'first
-        corfu-count 16
-        corfu-max-width 120
-        corfu-preview-current nil
-        corfu-on-exact-match nil
-        corfu-quit-at-boundary 'separator
-        corfu-quit-no-match 'separator)
-  (setq-default corfu-quit-no-match 'separator)
-  (setq text-mode-ispell-word-completion nil)
+    ;; Customize Corfu
+    (setq global-corfu-modes '((not erc-mode
+                                    circe-mode
+                                    help-mode
+                                    gud-mode
+                                    eat-mode
+                                    inferior-python-mode)
+                               t)
+          corfu-auto t
+          corfu-auto-delay 0.1
+          corfu-auto-prefix 1
+          corfu-cycle t
+          corfu-separator ?\s
+          corfu-preselect 'first
+          corfu-count 16
+          corfu-max-width 120
+          corfu-preview-current nil
+          corfu-on-exact-match nil
+          corfu-quit-at-boundary 'separator
+          corfu-quit-no-match 'separator)
+    (setq-default corfu-quit-no-match 'separator)
+    (setq text-mode-ispell-word-completion nil)
 
-  (add-hook 'after-init-hook 'global-corfu-mode)
+    (add-hook 'after-init-hook 'global-corfu-mode)
 
-  ;; Rebinding keys
-  (with-eval-after-load 'corfu
-    (define-key corfu-map (kbd "C-y") 'corfu-insert)
-    (define-key corfu-map (kbd "RET") nil))
+    ;; Rebinding keys
+    (with-eval-after-load 'corfu
+      (define-key corfu-map (kbd "C-y") 'corfu-insert)
+      (define-key corfu-map (kbd "RET") nil))
 
 
-  ;; Corfu when running Emacs in terminal
-  ;; (when (maybe-require-package 'corfu-terminal)
-  ;;   (with-eval-after-load 'corfu
-  ;;     (corfu-terminal-mode)))
+    ;; Corfu when running Emacs in terminal
+    ;; (when (maybe-require-package 'corfu-terminal)
+    ;;   (with-eval-after-load 'corfu
+    ;;     (corfu-terminal-mode)))
 
-  (require-package 'cape)
-  (add-hook 'prog-mode-hook (defun shl/corfu-add-cape-file-h ()
-                              (add-hook 'completion-at-point-function #'cape-file -10 t)))
-  (add-hook 'org-mode-hook (defun shl/corfu-add-cape-elisp-block-h ()
-                             (add-hook 'completion-at-point-functions #'cape-elisp-block 0 t)))
+    (require-package 'cape)
+    (add-hook 'prog-mode-hook (defun shl/corfu-add-cape-file-h ()
+                                (add-hook 'completion-at-point-function #'cape-file -10 t)))
+    (add-hook 'org-mode-hook (defun shl/corfu-add-cape-elisp-block-h ()
+                               (add-hook 'completion-at-point-functions #'cape-elisp-block 0 t)))
 
-  ;; Corfu history
-  (with-eval-after-load 'corfu
-    (require 'corfu-history)
-    (add-hook 'corfu-mode-hook 'corfu-history-mode)
+    ;; Corfu history
+    (with-eval-after-load 'corfu
+      (require 'corfu-history)
+      (add-hook 'corfu-mode-hook 'corfu-history-mode)
 
-    (with-eval-after-load 'savehist
-      (add-to-list 'savehist-additional-variables 'corfu-history)))
+      (with-eval-after-load 'savehist
+        (add-to-list 'savehist-additional-variables 'corfu-history)))
 
-  ;; Popopinfo
-  (with-eval-after-load 'corfu
-    (require 'corfu-popupinfo)
-    (add-hook 'corfu-mode-hook 'corfu-popupinfo-mode)
-    (setq corfu-popupinfo-delay '(0.5 . 1.0))))
+    ;; Popopinfo
+    (with-eval-after-load 'corfu
+      (require 'corfu-popupinfo)
+      (add-hook 'corfu-mode-hook 'corfu-popupinfo-mode)
+      (setq corfu-popupinfo-delay '(0.5 . 1.0))))
 #+end_src
 
 *** Kind-icon
 
 #+begin_src emacs-lisp :tangle "lisp/shl-development.el"
-(when (maybe-require-package 'kind-icon)
-  (with-eval-after-load 'corfu
-    (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter)))
+;; (when (maybe-require-package 'kind-icon)
+;;   (with-eval-after-load 'corfu
+;;     (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter)))
+#+end_src
+
+*** Direnv
+
+#+begin_src emacs-lisp :tangle "lisp/shl-development.el"
+(when (maybe-require-package 'envrc)
+  (with-eval-after-load 'envrc
+    (define-key envrc-mode-map (kbd "C-c e") 'envrc-command-map))
+  (add-hook 'after-init-hook #'envrc-global-mode))
 #+end_src
 
 #+begin_src emacs-lisp :tangle "lisp/shl-development.el"
 (provide 'shl-development)
 ;;; shl-development.el ends here
 #+end_src
+
+
 
 * Languages
 
@@ -1028,26 +1043,46 @@ Using avy makes jumping around far more effective
 ;;; Code:
 #+end_src
 
+*** Variables
+
+#+begin_src emacs-lisp :tangle "lisp/shl-python.el"
+(defvar shl/ipython-command '("ipython" "-i" "--simple-prompt" "--no-color-info" "--InteractiveShell.display_page=True")
+  "Command to initialize the IPython repl.")
+#+end_src
+
+*** Base Settings
+
 #+begin_src emacs-lisp :tangle "lisp/shl-python.el"
 (require-package 'python)
 (setq python-indent-guess-indent-offset-verbose nil)
-(setq python-check-command "NO_COLOR=1 rye check")
-(setq python-indent-guess-indent-offset-verbose nil)
+
+;; REPL
+(setq python-shell-interpreter "ipython"
+      python-shell-interpreter-args "--simple-prompt --no-color-info --InteractiveShell.display_page=True")
+
+;; Docstrings
 (setq python-fill-docstring-style 'django)
+#+end_src
+
+*** Checking
+
+#+begin_src emacs-lisp :tangle "lisp/shl-python.el"
 (add-hook 'python-mode-hook #'flymake-mode)
 (add-hook 'python-ts-mode-hook #'flymake-mode)
-(setq python-shell-interpreter "ipython"
-      python-shell-interpreter-args "-i --simple-prompt --InteractiveShell.display_page=True")
 
-(add-hook 'python-ts-hook 'eglot-ensure)
+(setq python-check-command "NO_COLOR=1 rye check")
+#+end_src
 
-(when (maybe-require-package 'envrc)
-  (with-eval-after-load 'envrc
-    (define-key envrc-mode-map (kbd "C-c e") 'envrc-command-map))
-  (add-hook 'after-init-mode 'envrc-global-mode))
+*** Formatting
 
+#+begin_src emacs-lisp :tangle "lisp/shl-python.el"
+#+end_src
+
+*** Virtual Environments
+
+#+begin_src emacs-lisp :tangle "lisp/shl-python.el"
 ;; (when (maybe-require-package 'pet)
-;;   (add-hook 'python-base-mode-hook 'pet-mode -10))
+;;   (add-hook 'python-ts-hook 'pet-mode -10))
 #+end_src
 
 #+begin_src emacs-lisp :tangle "lisp/shl-python.el"
