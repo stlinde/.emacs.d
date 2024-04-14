@@ -244,34 +244,44 @@ advice for `require-package', to which ARGS are passed."
 ** Theme
 
 #+begin_src emacs-lisp :tangle "lisp/shl-appearance.el"
-;; Don't ask if theme is safe
-(setopt custom-safe-themes t)
+  ;; Don't ask if theme is safe
+  (setopt custom-safe-themes t)
 
-;; Install theme
-(require-package 'ef-themes)
+  ;; Install theme
+  (require-package 'ef-themes)
+  (require-package 'modus-themes)
 
-;; Customize ef-themes
-(setq ef-themes-mixed-fonts t
-      ef-themes-variable-pitch-ui t)
+  ;; Customize ef-themes
+  (setq ef-themes-mixed-fonts t
+	ef-themes-variable-pitch-ui t)
+
+  ;; Customize Modus Themes
+  (setq modus-themes-to-toggle '(modus-vivendi-deuteranopia modus-operandi-deuteranopia)
+	modus-themes-mixed-fonts t
+	modus-themes-bold-constructs t
+	modus-themes-italic-constructs t
+	modus-themes-variable-pitch-ui t
+	modus-themes-slanted-constructs t
+	modus-themes-org-blocks 'gray-background)
 
 
+  ;; Modeline
+  (defun shl/ef-themes-mode-line ()
+    "Tweak the style of the modeline"
+    (ef-themes-with-colors
+      (custom-set-faces
+       `(mode-line ((,c :background ,bg-active :foreground ,fg-main :box (:line-width 1 :color ,fg-dim))))
+       `(mode-linde-inactive ((,c box (:line-width 1 :color ,bg-active)))))))
+  (add-hook 'ef-themes-post-load-hook #'shl/ef-themes-mode-line)
 
-;; Modeline
-(defun shl/ef-themes-mode-line ()
-  "Tweak the style of the modeline"
-  (ef-themes-with-colors
-    (custom-set-faces
-     `(mode-line ((,c :background ,bg-active :foreground ,fg-main :box (:line-width 1 :color ,fg-dim))))
-     `(mode-linde-inactive ((,c box (:line-width 1 :color ,bg-active)))))))
-(add-hook 'ef-themes-post-load-hook #'shl/ef-themes-mode-line)
 
+  ;; Load theme (ef-themes-select also calls ef-themes-post-load-hook)
+  ;; (ef-themes-select 'ef-deuteranopia-light)
+  (modus-themes-select 'modus-vivendi-deuteranopia)
 
-;; Load theme (ef-themes-select also calls ef-themes-post-load-hook)
-(ef-themes-select 'ef-deuteranopia-light)
-
-;; Enabling toggling
-(setq ef-themes-to-toggle '(ef-deuteranopia-light ef-deuteranopia-dark))
-(global-set-key (kbd "C-c h t") 'ef-themes-toggle)
+  ;; Enabling toggling
+  (setq ef-themes-to-toggle '(ef-deuteranopia-light ef-deuteranopia-dark))
+  (global-set-key (kbd "C-c h t") 'ef-themes-toggle)
 
 #+end_src
 
@@ -859,7 +869,7 @@ Using avy makes jumping around far more effective
   (global-set-key (kbd "C-x M-g") 'magit-dispatch))
 
 ;; Show source file TODO in magit
-(maybe-require-package 'magit-todo)
+(maybe-require-package 'magit-todos)
 
 ;; Good commit style
 (maybe-require-package 'git-commit)
@@ -1088,6 +1098,73 @@ Using avy makes jumping around far more effective
 #+begin_src emacs-lisp :tangle "lisp/shl-python.el"
 (provide 'shl-python)
 ;;; shl-python.el ends here
+#+end_src
+
+** C
+
+#+begin_src emacs-lisp :tangle "lisp/shl-c.el"
+;;; shl-c.el --- -*- lexical-binding: t -*-
+;;; Commentary:
+;;; Code:
+#+end_src
+
+*** General
+
+#+begin_src emacs-lisp :tangle "lisp/shl-c.el"
+(when (maybe-require-package 'cc-mode)
+  ;; Custom style based on linux
+  (setq c-basic-offset tab-width
+        c-backspace-function #'delete-backward-char)
+
+
+  (c-add-style
+   "doom" '((c-comment-only-line-offset . 0)
+            (c-basic-offset . 8)
+            (c-hanging-braces-alist (brace-list-open)
+                                    (defun-open)
+                                    (brace-entry-open)
+                                    (substatement-open after)
+                                    (block-close . c-snug-do-while)
+                                    (arglist-cont-nonempty))
+            (c-cleanup-list brace-else-brace)
+            (c-offsets-alist
+             (knr-argdecl-intro . 0)
+             (substatement-open . 0)
+             (substatement-label . 0)
+             (statement-cont . +)
+             (case-label . +)
+             ;; align args with open brace OR don't indent at all (if open
+             ;; brace is at eolp and close brace is after arg with no trailing
+             ;; comma)
+             (brace-list-intro . 0)
+             (brace-list-close . -)
+             (arglist-intro . +)
+             ;; (arglist-close +cc-lineup-arglist-close 0)
+             ;; don't over-indent lambda blocks
+             (inline-open . 0)
+             (inlambda . 0)
+             ;; indent access keywords +1 level, and properties beneath them
+             ;; another level
+             (access-label . -)
+             ;; (inclass +cc-c++-lineup-inclass +)
+             (label . 0))))
+
+  (when (listp c-default-style)
+    (setf (alist-get 'other c-default-style) "doom")))
+#+end_src
+
+*** CMake
+
+#+begin_src emacs-lisp :tangle "lisp/shl-c.el"
+(maybe-require-package 'cmake-mode)
+#+end_src
+
+*** Style
+
+
+#+begin_src emacs-lisp :tangle "lisp/shl-c.el"
+(provide 'shl-c)
+;;; shl-c.el ends here
 #+end_src
 
 * Misc
