@@ -56,9 +56,6 @@
   (global-set-key (kbd "C-x 2") 'vsplit-last-buffer)
   (global-set-key (kbd "C-x 3") 'hsplit-last-buffer))
 
-
-(global-set-key [remap kill-buffer] 'kill-this-buffer)
-
 (add-hook 'after-init-hook 'delete-selection-mode)
 
 ;; Automatically revert buffers when file changes on disk

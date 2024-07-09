@@ -23,6 +23,8 @@
         modus-themes-org-blocks 'gray-background)
   (modus-themes-select 'modus-vivendi-tinted))
 
+(use-package ef-themes
+  :ensure t)
 
 (set-face-attribute 'default nil
                     :family "RobotoMono Nerd Font"
