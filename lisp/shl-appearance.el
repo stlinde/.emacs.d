@@ -6,9 +6,8 @@
 (setopt custom-safe-themes t)
 
 ;; Transparency
-(set-frame-parameter nil 'alpha-background 70)
-
-(add-to-list 'default-frame-alist '(alpha-background . 70))
+(set-frame-parameter nil 'alpha-background 80)
+(add-to-list 'default-frame-alist '(alpha-background . 80))
 
 ;; Install theme
 (use-package modus-themes
