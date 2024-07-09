@@ -282,8 +282,8 @@
          ("C-c n i" . denote-link) ;; Insert mnemonic
          ("C-c n I" . denote-add-links)
          ("C-c n b" . denote-backlinks)
-         ("C-c n f f" . denote-find-link)
-         ("C-c n f b" . denote-find-backlink)
+         ("C-c n l f" . denote-find-link)
+         ("C-c n l b" . denote-find-backlink)
          ("C-c n r" . denote-rename-file)
          ("C-c n R" . denote-rename-file-using-front-matter)
 
@@ -317,8 +317,10 @@
                    :kill-buffer t
                    :jump-to-captured t))))
 
-
-
+(use-package consult-denote
+  :ensure t
+  :bind (("C-c n f" . consult-denote-find)
+         ("C-c n g" . consult-denote-grep)))
 
 (provide 'shl-org)
 ;;; shl-org.el ends here
