@@ -20,8 +20,9 @@
 
 (use-package eglot
   :ensure nil
-  :config
-  (add-hook 'python-ts-mode-hook 'eglot-ensure))
+  :hook ((python-ts-mode . eglot-ensure)
+         (c-ts-mode . eglot-ensure)
+         (c++-ts-mode . eglot-ensure)))
 
 (setq tab-always-indent 'complete)
 
@@ -43,7 +44,6 @@
 (use-package corfu
   :ensure t
   :config
-
   ;; Customize Corfu
   (setq global-corfu-modes '((not erc-mode
                                   circe-mode
@@ -67,7 +67,7 @@
   (setq-default corfu-quit-no-match 'separator)
   (setq text-mode-ispell-word-completion nil)
 
-  (add-hook 'after-init-hook 'global-corfu-mode)
+  (global-corfu-mode 1)
 
   ;; Rebinding keys
   (with-eval-after-load 'corfu
