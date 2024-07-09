@@ -5,9 +5,13 @@
 ;; Don't ask if theme is safe
 (setopt custom-safe-themes t)
 
+(defvar shl--theme 'modus-operandi-deuteranopia)
+(defvar shl--font-weight 'semilight)
+
+
 ;; Transparency
-(set-frame-parameter nil 'alpha-background 80)
-(add-to-list 'default-frame-alist '(alpha-background . 80))
+(set-frame-parameter nil 'alpha-background 100)
+(add-to-list 'default-frame-alist '(alpha-background . 100))
 
 ;; Install theme
 (use-package modus-themes
@@ -20,7 +24,7 @@
         modus-themes-variable-pitch-ui t
         modus-themes-slanted-constructs t
         modus-themes-org-blocks 'gray-background)
-  (modus-themes-select 'modus-vivendi-tinted))
+  (modus-themes-select shl--theme))
 
 (use-package ef-themes
   :ensure t)
@@ -28,16 +32,15 @@
 (set-face-attribute 'default nil
                     :family "RobotoMono Nerd Font"
                     :height 105
-                    :weight 'medium)
-
+                    :weight shl--font-weight)
 (set-face-attribute 'variable-pitch nil
 		    :family "Iosevka Comfy Motion Duo"
 		    :height 105
-		    :weight 'medium)
+		    :weight shl--font-weight)
 (set-face-attribute 'fixed-pitch nil
 		    :family "Iosevka Comfy"
 		    :height 105
-		    :weight 'medium)
+		    :weight shl--font-weight)
 
 (when (fboundp 'display-line-numbers-mode)
   (setq-default display-line-numbers-width 3)
