@@ -8,6 +8,23 @@
 (defvar shl--theme 'modus-operandi-deuteranopia)
 (defvar shl--font-weight 'medium)
 
+;; Padding
+(use-package spacious-padding
+  :ensure t
+  :defer nil
+  :config
+  (setq spacious-padding-widths
+      '( :internal-border-width 15
+         :header-line-width 4
+         :mode-line-width 6
+         :tab-width 4
+         :right-divider-width 30
+         :scroll-bar-width 8
+         :fringe-width 8))
+  (setq spacious-padding-subtle-mode-line
+      `( :mode-line-active 'default
+         :mode-line-inactive vertical-border))
+  (spacious-padding-mode 1))
 
 ;; Transparency
 (set-frame-parameter nil 'alpha-background 100)
@@ -23,11 +40,25 @@
         modus-themes-italic-constructs t
         modus-themes-variable-pitch-ui t
         modus-themes-slanted-constructs t
-        modus-themes-org-blocks 'gray-background)
-  (modus-themes-select shl--theme))
+        modus-themes-org-blocks 'gray-background))
+  ;; (modus-themes-select shl--theme))
 
 (use-package ef-themes
-  :ensure t)
+  :ensure t
+  :defer nil
+  :init
+  (defun shl--ef-themes-mode-line ()
+  "Tweak the style of the mode lines."
+  (ef-themes-with-colors
+    (custom-set-faces
+     `(mode-line ((,c :background ,bg-active :foreground ,fg-main :box (:line-width 1 :color ,fg-dim))))
+     `(mode-line-inactive ((,c :box (:line-width 1 :color ,bg-active)))))))
+
+  (add-hook 'ef-themes-post-load-hook  #'shl--ef-themes-mode-line)
+  :config
+  (setopt ef-themes-variable-pitch-ui t
+          ef-themes-mixed-fonts t)
+  (ef-themes-select 'ef-dream))
 
 (set-face-attribute 'default nil
                     :family "Iosevka Comfy"
