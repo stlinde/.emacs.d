@@ -6,7 +6,7 @@
 (setopt custom-safe-themes t)
 
 (defvar shl--theme 'modus-operandi-deuteranopia)
-(defvar shl--font-weight 'semilight)
+(defvar shl--font-weight 'medium)
 
 
 ;; Transparency
@@ -30,7 +30,7 @@
   :ensure t)
 
 (set-face-attribute 'default nil
-                    :family "RobotoMono Nerd Font"
+                    :family "Iosevka Comfy"
                     :height 105
                     :weight shl--font-weight)
 (set-face-attribute 'variable-pitch nil

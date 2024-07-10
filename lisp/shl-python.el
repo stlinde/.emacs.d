@@ -5,6 +5,9 @@
 (defvar shl/ipython-command '("ipython" "-i" "--simple-prompt" "--no-color-info" "--InteractiveShell.display_page=True")
   "Command to initialize the IPython repl.")
 
+(use-package pyvenv
+  :ensure t)
+
 (use-package python
   :ensure nil
   :config
