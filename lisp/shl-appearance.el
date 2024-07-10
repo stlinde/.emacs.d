@@ -40,8 +40,8 @@
         modus-themes-italic-constructs t
         modus-themes-variable-pitch-ui t
         modus-themes-slanted-constructs t
-        modus-themes-org-blocks 'gray-background))
-  ;; (modus-themes-select shl--theme))
+        modus-themes-org-blocks 'gray-background)
+  (modus-themes-select shl--theme))
 
 (use-package ef-themes
   :ensure t
@@ -57,8 +57,8 @@
   (add-hook 'ef-themes-post-load-hook  #'shl--ef-themes-mode-line)
   :config
   (setopt ef-themes-variable-pitch-ui t
-          ef-themes-mixed-fonts t)
-  (ef-themes-select 'ef-dream))
+          ef-themes-mixed-fonts t))
+
 
 (set-face-attribute 'default nil
                     :family "Iosevka Comfy"

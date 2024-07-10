@@ -27,7 +27,7 @@
   (require-init 'shl-vc)
   (require-init 'shl-python)
   (require-init 'shl-org)
-  ;; (require-init 'shl-misc)
+  (require-init 'shl-misc)
   )
 
 ;;; init.el ends here

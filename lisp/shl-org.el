@@ -276,6 +276,7 @@
          ("C-c n c" . denote-region)
          ("C-c n N" . denote-type)
          ("C-c n d" . denote-date)
+         ("C-c n j" . denote-journal-extras-new-entry)
          ("C-c n z" . denote-signature) ;; Zettlekasten mnemonic
          ("C-c n s" . denote-subdirectory)
          ("C-c n t" . denote-template)
@@ -304,7 +305,8 @@
           denote-rename-confirmations '(rewrite-front-matter modify-file-name)
           denote-date-prompt-use-org-read-date t
           denote-date-format nil
-          denote-backlinks-show-context t)
+          denote-backlinks-show-context t
+          denote-journal-extras-title-format 'day-date-month-year)
 
   (with-eval-after-load 'org-capture
     (setopt denote-org-capture-specifiers "%l\n%i\n%?")
@@ -316,6 +318,7 @@
                    :immediate-finish nil
                    :kill-buffer t
                    :jump-to-captured t))))
+
 
 (use-package consult-denote
   :ensure t
